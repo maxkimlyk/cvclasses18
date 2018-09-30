@@ -24,6 +24,12 @@ IntegralType sum_in_rect_by_integral(const cv::Mat& integral, const cv::Rect& re
 
 void mean_stddev_by_integral(const cv::Mat& integral, const cv::Mat& integral_sq, const cv::Rect& rect, double& mean, double& std);
 void mean_disp_by_integral(const cv::Mat& integral, const cv::Mat& integral_sq, const cv::Rect& rect, double& mean, double& disp);
+
+template<class T>
+int round_to_nearest_odd(T x)
+{
+    return 2 * (int)(x / T(2)) + 1;
+}
 } // namespace cvlib_utils
 
 #endif
