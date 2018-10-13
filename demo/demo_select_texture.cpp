@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <cvlib.hpp>
+#include <utils.hpp>
 
 namespace
 {
@@ -50,7 +51,11 @@ int demo_select_texture(int argc, char* argv[])
 
     cv::setMouseCallback(data.wnd, mouse, &data);
 
+    cvlib_utils::statistics statistics;
+
     cv::Mat frame_gray;
+
+    statistics.at_start();
     while (cv::waitKey(30) != 27) // ESC
     {
         cap >> data.image;
@@ -60,11 +65,14 @@ int demo_select_texture(int argc, char* argv[])
         if (roi.area())
         {
             const auto mask = cvlib::select_texture(frame_gray, roi, eps);
-            const auto segmented = mask.clone();
+            auto segmented = mask.clone();
             frame_gray.copyTo(segmented, mask);
+            statistics.at_frame_end();
+            statistics.draw(segmented);
             cv::imshow(demo_wnd, segmented);
             cv::rectangle(data.image, data.tl, data.br, cv::Scalar(0, 0, 255));
         }
+
         cv::imshow(data.wnd, data.image);
     }
 

@@ -28,21 +28,23 @@ cv::Mat select_texture(const cv::Mat& image, const cv::Rect& roi, double eps);
 /// \brief Motion Segmentation algorithm
 class motion_segmentation : public cv::BackgroundSubtractor
 {
-    public:
+public:
     /// \brief ctor
-    motion_segmentation();
+	motion_segmentation(const cv::Mat& initial_frame);
 
     /// \see cv::BackgroundSubtractor::apply
     void apply(cv::InputArray image, cv::OutputArray fgmask, double learningRate = -1) override;
 
     /// \see cv::BackgroundSubtractor::BackgroundSubtractor
-    void getBackgroundImage(cv::OutputArray backgroundImage) const override
-    {
-        backgroundImage.assign(bg_model_);
-    }
+    void getBackgroundImage(cv::OutputArray backgroundImage) const override;
 
-    private:
-    cv::Mat bg_model_;
+    /// \brief set variance threshold
+    void setVarThreshold(double threshold);
+
+private:
+    cv::Mat distribution_means_;
+    cv::Mat distribution_var_;
+    double variance_threshold_ = 2.5;
 };
 } // namespace cvlib
 
