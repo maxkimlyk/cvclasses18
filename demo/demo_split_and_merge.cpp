@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <cvlib.hpp>
+#include <utils.hpp>
 
 int demo_split_and_merge(int argc, char* argv[])
 {
@@ -27,14 +28,23 @@ int demo_split_and_merge(int argc, char* argv[])
     cv::createTrackbar("stdev", demo_wnd, &stddev, 90);
     cv::createTrackbar("MCS", demo_wnd, &min_chunk_size, 20);
 
+    cvlib_utils::statistics statistics;
+
+    statistics.at_start();
     while (cv::waitKey(30) != 27) // ESC
     {
         cap >> frame;
 
         int used_min_chunk_size = min_chunk_size < 1 ? 1 : min_chunk_size;
 
+        cv::Mat result = cvlib::split_and_merge(frame, stddev, used_min_chunk_size);
+
+        statistics.at_frame_end();
+
         cv::imshow(origin_wnd, frame);
-        cv::imshow(demo_wnd, cvlib::split_and_merge(frame, stddev, used_min_chunk_size));
+
+        statistics.draw(result);
+        cv::imshow(demo_wnd, result);
     }
 
     cv::destroyWindow(origin_wnd);
