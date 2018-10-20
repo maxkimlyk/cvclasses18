@@ -46,6 +46,17 @@ private:
     cv::Mat distribution_var_;
     double variance_threshold_ = 2.5;
 };
+
+/// \brief FAST corner detection algorithm
+class corner_detector_fast : public cv::Feature2D
+{
+    public:
+    /// \brief Fabrique method for creating FAST detector
+    static cv::Ptr<corner_detector_fast> create();
+
+    /// \see Feature2d::detect
+    virtual void detect(cv::InputArray image, CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask = cv::noArray()) override;
+};
 } // namespace cvlib
 
 #endif // __CVLIB_HPP__
