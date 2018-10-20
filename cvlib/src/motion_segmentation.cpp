@@ -39,8 +39,8 @@ void motion_segmentation::apply(cv::InputArray input, cv::OutputArray output, do
 
             float diff = value - distribution_means_.at<float>(i, j);
             float diff2 = diff * diff - distribution_var_.at<float>(i, j);
-            distribution_means_.at<float>(i, j) += p * diff;
-            distribution_var_.at<float>(i, j) += p * diff2;
+            distribution_means_.at<float>(i, j) += float(p) * diff;
+            distribution_var_.at<float>(i, j) += float(p) * diff2;
         }
 
     output.assign(result);

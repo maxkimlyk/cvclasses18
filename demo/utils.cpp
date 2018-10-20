@@ -62,8 +62,7 @@ void put_fps_text(cv::Mat& image, fps_counter& fps, cv::Scalar color /*= (255, 0
     const auto txtFont = CV_FONT_HERSHEY_SIMPLEX;
     const auto fontScale = 0.5;
     const auto thickness = 1;
-    static const cv::Size textSize = cv::getTextSize("fps: 19.127", txtFont, fontScale, thickness, nullptr);
-    static const cv::Point textOrgPoint = {image.size().width / 2 - textSize.width / 2, image.size().height - 5};
+    static const cv::Point textOrgPoint = {2, 12};
 
     std::stringstream ss;
     ss.precision(5);

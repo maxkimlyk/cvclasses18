@@ -18,7 +18,6 @@ TEST_CASE("Select Texture: Uniform image", "[select_texture]")
     const cv::Mat image(5, 5, CV_8UC1, cv::Scalar{10});
     const cv::Mat ref(5, 5, CV_8UC1, cv::Scalar{255});
     const auto res = select_texture(image, cv::Rect {1, 1, 2, 2}, 5.0);
-    std::cout << res << std::endl;
     REQUIRE(0 == cv::countNonZero(ref - res));
 }
 

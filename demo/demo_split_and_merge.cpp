@@ -7,7 +7,8 @@
 #include <opencv2/opencv.hpp>
 
 #include <cvlib.hpp>
-#include <utils.hpp>
+
+#include "utils.hpp"
 
 int demo_split_and_merge(int argc, char* argv[])
 {
@@ -28,9 +29,7 @@ int demo_split_and_merge(int argc, char* argv[])
     cv::createTrackbar("stdev", demo_wnd, &stddev, 90);
     cv::createTrackbar("MCS", demo_wnd, &min_chunk_size, 20);
 
-    cvlib_utils::statistics statistics;
-
-    statistics.at_start();
+    utils::fps_counter fps;
     while (cv::waitKey(30) != 27) // ESC
     {
         cap >> frame;
@@ -39,11 +38,9 @@ int demo_split_and_merge(int argc, char* argv[])
 
         cv::Mat result = cvlib::split_and_merge(frame, stddev, used_min_chunk_size);
 
-        statistics.at_frame_end();
-
         cv::imshow(origin_wnd, frame);
 
-        statistics.draw(result);
+        utils::put_fps_text(result, fps);
         cv::imshow(demo_wnd, result);
     }
 
