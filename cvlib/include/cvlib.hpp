@@ -75,6 +75,18 @@ private:
 
     /// \brief Test pixel whether it is corner or not
     bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point);
+    /// \see Feature2d::compute
+    virtual void compute(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors) override;
+
+    /// \see Feature2d::detectAndCompute
+    virtual void detectAndCompute(cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors,
+                                  bool useProvidedKeypoints = false) override;
+
+    /// \see Feature2d::getDefaultName
+    virtual cv::String getDefaultName() const override
+    {
+        return "FAST_Binary";
+    }
 };
 } // namespace cvlib
 
