@@ -33,27 +33,6 @@ int round_to_nearest_odd(T x)
     return 2 * (int)(x / T(2)) + 1;
 }
 
-class statistics
-{
-public:
-    void at_start();
-    void at_frame_end();
-    void draw(cv::Mat &frame);
-
-private:
-    typedef std::chrono::high_resolution_clock clock;
-    typedef std::chrono::time_point<clock> time;
-    typedef std::chrono::duration<float> duration_seconds;
-
-    uint64_t frame_cnt_ = 0;
-    time start_time_;
-    time last_update_time_;
-
-    float fps_;
-    float frame_duration_;
-    duration_seconds run_time_;
-};
-
 } // namespace cvlib_utils
 
 #endif

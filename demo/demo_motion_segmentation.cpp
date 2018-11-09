@@ -5,8 +5,9 @@
  */
 
 #include <cvlib.hpp>
-#include <utils.hpp>
 #include <opencv2/opencv.hpp>
+
+#include "utils.hpp"
 
 int demo_motion_segmentation(int argc, char* argv[])
 {
@@ -23,7 +24,7 @@ int demo_motion_segmentation(int argc, char* argv[])
     const double threshold_multiplyer = 10.0 / max_threshold;
 
     int learning_rate = 50;
-    const double learning_rate_max = 100;
+    const int learning_rate_max = 100;
 
     cv::namedWindow(main_wnd);
     cv::namedWindow(demo_wnd);
@@ -37,13 +38,11 @@ int demo_motion_segmentation(int argc, char* argv[])
     cv::cvtColor(frame, frame_gray, CV_BGR2GRAY);
     auto mseg = cvlib::motion_segmentation(frame_gray);
 
-    cvlib_utils::statistics statistics;
-
     cv::Mat frame_mseg;
     cv::Mat blured;
     cv::Mat background;
 
-    statistics.at_start();
+    utils::fps_counter fps;
     while (cv::waitKey(30) != 27) // ESC
     {
         cap >> frame;
@@ -52,14 +51,12 @@ int demo_motion_segmentation(int argc, char* argv[])
 
         cv::GaussianBlur(frame_gray, blured, cv::Size(5, 5), 5);
 
-        mseg.setVarThreshold(threshold * threshold_multiplyer); // \todo use TackbarCallback
-        mseg.apply(blured, frame_mseg, (double)(learning_rate) / learning_rate_max);
-
-        statistics.at_frame_end();
+        mseg.setVarThreshold(threshold * threshold_multiplyer);
+        mseg.apply(blured, frame_mseg, (double)(learning_rate) / learning_rate_max * 0.01);
 
         if (!frame_mseg.empty())
         {
-            statistics.draw(frame_mseg);
+            utils::put_fps_text(frame_mseg, fps);
             cv::imshow(demo_wnd, frame_mseg);
         }
 

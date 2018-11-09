@@ -50,12 +50,31 @@ private:
 /// \brief FAST corner detection algorithm
 class corner_detector_fast : public cv::Feature2D
 {
-    public:
+public:
     /// \brief Fabrique method for creating FAST detector
     static cv::Ptr<corner_detector_fast> create();
 
     /// \see Feature2d::detect
     virtual void detect(cv::InputArray image, CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask = cv::noArray()) override;
+
+    /// \brief Set points threshold
+    inline void setSuccededPointsThreshold(size_t thresh)
+    {
+        succeded_points_threshold = thresh > 4 ? thresh : 4;
+    }
+
+    // \brief Set brightness threshold
+    inline void setBrightnessTreshold(size_t thresh)
+    {
+        brightness_threshold = thresh;
+    }
+
+private:
+    size_t succeded_points_threshold = 12;
+    size_t brightness_threshold = 40;
+
+    /// \brief Test pixel whether it is corner or not
+    bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point);
 };
 } // namespace cvlib
 
