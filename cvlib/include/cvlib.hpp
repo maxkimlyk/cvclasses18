@@ -9,6 +9,10 @@
 
 #include <opencv2/opencv.hpp>
 
+#ifndef M_PI
+#define M_PI 3.1415926535
+#endif
+
 namespace cvlib
 {
 /// \brief Split and merge algorithm for image segmentation
@@ -51,6 +55,8 @@ private:
 class corner_detector_fast : public cv::Feature2D
 {
 public:
+    corner_detector_fast();
+
     /// \brief Fabrique method for creating FAST detector
     static cv::Ptr<corner_detector_fast> create();
 
@@ -69,12 +75,6 @@ public:
         brightness_threshold = thresh;
     }
 
-private:
-    size_t succeded_points_threshold = 12;
-    size_t brightness_threshold = 40;
-
-    /// \brief Test pixel whether it is corner or not
-    bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point);
     /// \see Feature2d::compute
     virtual void compute(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors) override;
 
@@ -87,6 +87,17 @@ private:
     {
         return "FAST_Binary";
     }
+
+private:
+    size_t succeded_points_threshold = 12;
+    size_t brightness_threshold = 40;
+    size_t descriptor_threshold = 40;
+    std::vector<std::pair<cv::Point2i, cv::Point2i>> brief_pairs;
+
+    /// \brief Test pixel whether it is corner or not
+    bool testPixel(cv::Mat& image, cv::Point2i point, float &direction);
+
+    void initBriefPairs();
 };
 } // namespace cvlib
 

@@ -103,6 +103,8 @@ TEST_CASE("shapes", "[corner_detector_fast]")
 
         fast->detect(image, out);
         REQUIRE(1 == out.size());
+        float a = out[0].angle;
+        CHECK(std::abs(2 * M_PI - out[0].angle) < 2 * M_PI * 0.05);
     }
 }
 
