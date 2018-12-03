@@ -7,6 +7,8 @@
 #ifndef __CVLIB_HPP__
 #define __CVLIB_HPP__
 
+#include <iostream>
+
 #include <opencv2/opencv.hpp>
 
 #ifndef M_PI
@@ -32,9 +34,9 @@ cv::Mat select_texture(const cv::Mat& image, const cv::Rect& roi, double eps);
 /// \brief Motion Segmentation algorithm
 class motion_segmentation : public cv::BackgroundSubtractor
 {
-public:
+    public:
     /// \brief ctor
-	motion_segmentation(const cv::Mat& initial_frame);
+    motion_segmentation(const cv::Mat& initial_frame);
 
     /// \see cv::BackgroundSubtractor::apply
     void apply(cv::InputArray image, cv::OutputArray fgmask, double learningRate = -1) override;
@@ -45,7 +47,7 @@ public:
     /// \brief set variance threshold
     void setVarThreshold(double threshold);
 
-private:
+    private:
     cv::Mat distribution_means_;
     cv::Mat distribution_var_;
     double variance_threshold_ = 2.5;
@@ -54,7 +56,7 @@ private:
 /// \brief FAST corner detection algorithm
 class corner_detector_fast : public cv::Feature2D
 {
-public:
+    public:
     corner_detector_fast();
 
     /// \brief Fabrique method for creating FAST detector
@@ -88,14 +90,14 @@ public:
         return "FAST_Binary";
     }
 
-private:
+    private:
     size_t succeded_points_threshold = 12;
     size_t brightness_threshold = 40;
     size_t descriptor_threshold = 40;
     std::vector<std::pair<cv::Point2i, cv::Point2i>> brief_pairs;
 
     /// \brief Test pixel whether it is corner or not
-    bool testPixel(cv::Mat& image, cv::Point2i point, float &direction);
+    bool testPixel(cv::Mat& image, cv::Point2i point, float& direction);
 
     void initBriefPairs();
 };
@@ -105,7 +107,7 @@ class descriptor_matcher : public cv::DescriptorMatcher
 {
     public:
     /// \brief ctor
-    descriptor_matcher(float ratio = 1.5) : ratio_(ratio)
+    descriptor_matcher(float ratio = 0.5f) : ratio_(ratio)
     {
     }
 
@@ -142,13 +144,89 @@ class descriptor_matcher : public cv::DescriptorMatcher
     }
 
     private:
-    float ratio_;
+    float ratio_ = 0.5f;
+    float max_distance_ = 100.0f;
 };
 
 /// \brief Stitcher for merging images into big one
 class Stitcher
 {
     /// \todo design and implement
+    public:
+    Stitcher() : count_(0)
+    {
+    }
+
+    void add(cv::Mat new_part)
+    {
+        if (count_ == 0)
+        {
+            new_part.copyTo(acc_image_);
+            detector_.detectAndCompute(new_part, cv::Mat(), acc_corners_, acc_descriptors);
+        }
+        else
+        {
+            std::vector<cv::KeyPoint> new_corners;
+            cv::Mat new_descriptors;
+            detector_.detectAndCompute(new_part, cv::Mat(), new_corners, new_descriptors);
+
+            std::vector<std::vector<cv::DMatch>> pairs;
+            matcher_.radiusMatch(new_descriptors, acc_descriptors, pairs, 999.0f);
+
+            cv::Mat dbg_frame;
+            cv::drawMatches(new_part, new_corners, acc_image_, acc_corners_, pairs, dbg_frame);
+            cv::namedWindow("dbg");
+            cv::imshow("dbg", dbg_frame);
+
+            std::vector<cv::Point2f> src_points;
+            std::vector<cv::Point2f> dst_points;
+
+            src_points.reserve(pairs.size());
+            dst_points.reserve(pairs.size());
+
+            for (size_t i = 0; i < pairs.size(); ++i)
+            {
+                for (size_t j = 0; j < pairs[i].size(); ++j)
+                {
+                    cv::DMatch& dmatch = pairs[i][j];
+                    cv::KeyPoint& new_corner = new_corners[dmatch.queryIdx];
+                    cv::KeyPoint& old_corner = acc_corners_[dmatch.trainIdx];
+                    src_points.push_back(new_corner.pt);
+                    dst_points.push_back(old_corner.pt); // << or vise versa?
+                }
+            }
+
+            if (src_points.size() < 4)
+            {
+                std::cout << "ERROR: Not enough matches\n";
+                return;
+            }
+
+            cv::Mat homo_mat = cv::findHomography(src_points, dst_points, CV_RANSAC, 3);
+
+            cv::Mat new_part_rectified;
+            cv::warpPerspective(new_part, new_part_rectified, homo_mat, acc_image_.size());
+
+            cv::namedWindow("test");
+            cv::imshow("test", new_part_rectified);
+        }
+        count_++;
+    }
+
+    cv::Mat getAccumulatedImage()
+    {
+        return acc_image_;
+    }
+
+    private:
+    cv::Mat acc_image_;
+    int count_;
+
+    std::vector<cv::KeyPoint> acc_corners_;
+    cv::Mat acc_descriptors;
+
+    cvlib::corner_detector_fast detector_;
+    cvlib::descriptor_matcher matcher_;
 };
 } // namespace cvlib
 
