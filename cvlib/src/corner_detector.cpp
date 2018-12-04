@@ -7,6 +7,7 @@
 #include "cvlib.hpp"
 
 #include <ctime>
+#include <fstream>
 
 namespace cvlib
 {
@@ -21,18 +22,26 @@ corner_detector_fast::corner_detector_fast()
     initBriefPairs();
 }
 
+void dbg_dump_brief_pairs(std::vector<std::pair<cv::Point2i, cv::Point2i>> pairs)
+{
+    std::ofstream file("brief_pairs.txt");
+    for (auto pair : pairs)
+        file << pair.first.x << " " << pair.first.y << " " << pair.second.x << " " << pair.second.y << "\n";
+}
+
 void corner_detector_fast::initBriefPairs()
 {
-    const size_t amount = 128;
-    const int radius = 10;
+    const size_t amount = dwords * 32;
+    const int radius = 30;
 
-    auto gen_coord = [radius]() -> float { return float(rand() % (2 * radius + 1) - radius); };
+    auto uniform_rand = []() { return float(rand() % 10001) / 10000.0f; };
+    auto gen_coord = [radius, uniform_rand]() -> float { return tanh(3.5f * (uniform_rand() - 0.5f)) * radius; };
 
     brief_pairs.reserve(amount);
     for (size_t i = 0; i < amount; ++i)
-    {
         brief_pairs.emplace_back(std::make_pair(cv::Point2f(gen_coord(), gen_coord()), cv::Point2f(gen_coord(), gen_coord())));
-    }
+
+    dbg_dump_brief_pairs(brief_pairs);
 }
 
 float getDirectionRadians(float index)
@@ -44,20 +53,39 @@ float getDirectionRadians(float index)
     return 2 * float(M_PI) * index / 16.0f;
 }
 
+static inline int soft_sign(int diff, int brightness_threshold)
+{
+    if (diff > brightness_threshold)
+        return 1;
+    else if (diff < -brightness_threshold)
+        return -1;
+    else
+        return 0;
+}
+
 bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point, float& direction)
 {
     static const cv::Point2i test_points_relative[16] = {{0, -3}, {1, -3}, {2, -2}, {3, -1}, {3, 0},  {3, 1},   {2, 2},   {1, 3},
                                                          {0, 3},  {-1, 3}, {-2, 2}, {-3, 1}, {-3, 0}, {-3, -1}, {-2, -2}, {-1, -3}};
 
-    bool first_flag = true;
-    size_t first_count = 0, count = 0, first_index = 0;
+    bool begin_flag = true;
+    int begin_sign = 0;
+    size_t begin_count = 0, count = 0, first_index = 0;
+    int current_sign = 0;
 
     for (size_t i = 0; i < 16; ++i)
     {
-        if (std::abs((int)(image.at<uint8_t>(point + test_points_relative[i])) - (int)(image.at<uint8_t>(point))) >= brightness_threshold)
+        int diff = (int)(image.at<uint8_t>(point + test_points_relative[i])) - (int)(image.at<uint8_t>(point));
+        int sign = soft_sign(diff, brightness_threshold);
+
+        if (sign != 0 && current_sign == sign)
         {
-            if (count++ == 0)
-                first_index = i;
+            count++;
+        }
+        else if (sign != 0 && current_sign == 0)
+        {
+            first_index = i;
+            count = 1;
         }
         else
         {
@@ -66,19 +94,32 @@ bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point, float& d
                 direction = getDirectionRadians(0.5f * (i - 1 + first_index));
                 return true;
             }
-            if (first_flag)
+
+            if (begin_flag)
             {
-                first_count = count;
-                first_flag = false;
+                begin_count = count;
+                begin_sign = current_sign;
+                begin_flag = false;
             }
-            count = 0;
-            first_index = 0;
+
+            if (sign != 0)
+            {
+                first_index = i;
+                count = 1;
+            }
+            else
+            {
+                count = 0;
+                first_index = 0;
+            }
         }
+
+        current_sign = sign;
     }
 
-    if (count + first_count >= succeded_points_threshold)
+    if (current_sign == begin_sign && count + begin_count >= succeded_points_threshold)
     {
-        float index = 0.5f * (first_index + (first_count - 1 + 16));
+        float index = 0.5f * (first_index + (begin_count - 1 + 16));
         direction = getDirectionRadians(index >= 16.0f ? index - 16.0f : index);
         return true;
     }
