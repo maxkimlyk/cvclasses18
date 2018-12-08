@@ -57,7 +57,7 @@ class motion_segmentation : public cv::BackgroundSubtractor
 class corner_detector_fast : public cv::Feature2D
 {
     public:
-    const int dwords = 4;
+    const int dwords = 8;
 
     corner_detector_fast();
 
@@ -95,8 +95,8 @@ class corner_detector_fast : public cv::Feature2D
     private:
     size_t succeded_points_threshold = 12;
     size_t brightness_threshold = 40;
-    size_t descriptor_threshold = 40;
-    std::vector<std::pair<cv::Point2i, cv::Point2i>> brief_pairs;
+    size_t descriptor_threshold = 50;
+    std::vector<std::pair<cv::Point2f, cv::Point2f>> brief_pairs;
 
     /// \brief Test pixel whether it is corner or not
     bool testPixel(cv::Mat& image, cv::Point2i point, float& direction);

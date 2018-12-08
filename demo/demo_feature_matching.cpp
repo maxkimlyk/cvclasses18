@@ -11,6 +11,12 @@
 
 const int MAX_RATIO = 100;
 
+void on_detector_threshold_change(int value, void* ptr)
+{
+    auto& detector = *(cvlib::corner_detector_fast*)(ptr);
+    detector.setBrightnessTreshold(value);
+}
+
 void on_ratio_threshold_change(int value, void* ptr)
 {
     auto& matcher = *(cvlib::descriptor_matcher*)(ptr);
@@ -29,11 +35,14 @@ int demo_feature_matching(int argc, char* argv[])
     cv::namedWindow(main_wnd);
     cv::namedWindow(demo_wnd);
 
-    auto detector = cvlib::corner_detector_fast::create();
+    auto detector = cvlib::corner_detector_fast();
     auto matcher = cvlib::descriptor_matcher();
 
     int ratio = MAX_RATIO / 2;
+    int detector_threshold = 25;
+
     cv::createTrackbar("ratio", demo_wnd, &ratio, MAX_RATIO, on_ratio_threshold_change, (void*)(&matcher));
+    cv::createTrackbar("det th", demo_wnd, &detector_threshold, 100, on_detector_threshold_change, (void*)(&detector));
 
     /// \brief helper struct for tidy code
     struct img_features
@@ -55,7 +64,7 @@ int demo_feature_matching(int argc, char* argv[])
     {
         cap >> test.img;
 
-        detector->detect(test.img, test.corners);
+        detector.detect(test.img, test.corners);
         cv::drawKeypoints(test.img, test.corners, main_frame);
         cv::imshow(main_wnd, main_frame);
 
@@ -63,7 +72,7 @@ int demo_feature_matching(int argc, char* argv[])
         if (pressed_key == ' ') // space
         {
             ref.img = test.img.clone();
-            detector->detectAndCompute(ref.img, cv::Mat(), ref.corners, ref.descriptors);
+            detector.detectAndCompute(ref.img, cv::Mat(), ref.corners, ref.descriptors);
         }
 
         if (ref.corners.empty())
@@ -71,7 +80,7 @@ int demo_feature_matching(int argc, char* argv[])
             continue;
         }
 
-        detector->compute(test.img, test.corners, test.descriptors);
+        detector.compute(test.img, test.corners, test.descriptors);
         matcher.radiusMatch(test.descriptors, ref.descriptors, pairs, 100.0f);
         cv::drawMatches(test.img, test.corners, ref.img, ref.corners, pairs, demo_frame);
 

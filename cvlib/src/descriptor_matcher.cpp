@@ -24,12 +24,12 @@ struct match
 
 namespace cvlib
 {
-static int distance(int32_t x[4], int32_t y[4])
+static int distance(cv::Mat x, cv::Mat y)
 {
     int cnt = 0;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < x.cols; ++i)
     {
-        int d = x[i] ^ y[i];
+        int d = x.at<int32_t>(0, i) ^ y.at<int32_t>(0, i);
         for (int k = 0; k < 32; ++k)
         {
             cnt += d & 1;
@@ -59,8 +59,8 @@ void descriptor_matcher::knnMatchImpl(cv::InputArray queryDescriptors, std::vect
 
         for (int j = 0; j < t_desc.rows; ++j)
         {
-            int32_t x[4] = {q_desc.at<int32_t>(i, 0), q_desc.at<int32_t>(i, 1), q_desc.at<int32_t>(i, 2), q_desc.at<int32_t>(i, 3)};
-            int32_t y[4] = {t_desc.at<int32_t>(j, 0), t_desc.at<int32_t>(j, 1), t_desc.at<int32_t>(j, 2), t_desc.at<int32_t>(j, 3)};
+            cv::Mat x = q_desc.row(i);
+            cv::Mat y = t_desc.row(j);
             int dist = distance(x, y);
 
             if (dist > (int)(max_distance_))

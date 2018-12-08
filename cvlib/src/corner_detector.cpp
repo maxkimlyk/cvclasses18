@@ -32,7 +32,7 @@ void dbg_dump_brief_pairs(std::vector<std::pair<cv::Point2i, cv::Point2i>> pairs
 void corner_detector_fast::initBriefPairs()
 {
     const size_t amount = dwords * 32;
-    const int radius = 30;
+    const int radius = 15;
 
     auto uniform_rand = []() { return float(rand() % 10001) / 10000.0f; };
     auto gen_coord = [radius, uniform_rand]() -> float { return tanh(3.5f * (uniform_rand() - 0.5f)) * radius; };
@@ -40,8 +40,6 @@ void corner_detector_fast::initBriefPairs()
     brief_pairs.reserve(amount);
     for (size_t i = 0; i < amount; ++i)
         brief_pairs.emplace_back(std::make_pair(cv::Point2f(gen_coord(), gen_coord()), cv::Point2f(gen_coord(), gen_coord())));
-
-    dbg_dump_brief_pairs(brief_pairs);
 }
 
 float getDirectionRadians(float index)
@@ -159,18 +157,25 @@ inline bool isInsideImage(const cv::Mat& image, cv::Point2f pt)
 
 void corner_detector_fast::compute(cv::InputArray input, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors)
 {
-    cv::Mat image = input.getMat();
+    cv::Mat image;
+
+    if (input.channels() == 1)
+        input.copyTo(image);
+    else if (input.channels() == 3)
+        cv::cvtColor(input, image, cv::COLOR_BGR2GRAY);
+
+    cv::GaussianBlur(image, image, cv::Size(9, 9), 2.0, 2.0, cv::BORDER_CONSTANT);
 
     const int desc_length = static_cast<int>(brief_pairs.size()) / 32;
     descriptors.create(static_cast<int>(keypoints.size()), desc_length, CV_32S);
     auto desc_mat = descriptors.getMat();
-    desc_mat.setTo(0);
 
     int* ptr = reinterpret_cast<int*>(desc_mat.ptr());
-    for (const auto& pt : keypoints)
+    for (int k = 0; k < desc_mat.rows; ++k)
     {
-        float cosa = std::cos(pt.angle);
-        float sina = std::sin(pt.angle);
+        cv::KeyPoint& pt = keypoints[k];
+        // float cosa = std::cos(pt.angle);
+        // float sina = std::sin(pt.angle);
 
         uint32_t val = 0;
         for (int i = 0; i < desc_length; ++i)
@@ -178,14 +183,15 @@ void corner_detector_fast::compute(cv::InputArray input, std::vector<cv::KeyPoin
             for (int p = 32 * i; p < 32 * i + 32; ++p)
             {
                 auto& pair = brief_pairs[p];
-                cv::Point2f new_first = pt.pt + rotatePoint(pair.first, cosa, sina);
-                cv::Point2f new_second = pt.pt + rotatePoint(pair.second, cosa, sina);
+                // cv::Point2f new_first = pt.pt + rotatePoint(pair.first, cosa, sina);
+                // cv::Point2f new_second = pt.pt + rotatePoint(pair.second, cosa, sina);
+                cv::Point2f new_first = pt.pt + pair.first;
+                cv::Point2f new_second = pt.pt + pair.second;
                 int first_val = isInsideImage(image, new_first) ? image.at<uint8_t>(new_first) : 0;
                 int second_val = isInsideImage(image, new_second) ? image.at<uint8_t>(new_second) : 0;
                 val = (val << 1) | (std::abs(second_val - first_val) >= descriptor_threshold);
             }
-            *ptr = val;
-            ++ptr;
+            desc_mat.at<int32_t>(k, i) = val;
         }
     }
 }

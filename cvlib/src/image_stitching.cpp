@@ -185,10 +185,14 @@ cv::Mat Stitcher::getDebugImage(cv::Mat new_image)
     std::vector<std::vector<cv::DMatch>> pairs;
     cv::Mat result;
 
-    if (count_ < 1)
-        return cv::Mat();
-
     detector_.detectAndCompute(new_image, cv::Mat(), new_corners, new_descriptors);
+
+    if (count_ < 1)
+    {
+        cv::drawKeypoints(new_image, new_corners, result);
+        return result;
+    }
+
     matcher_.radiusMatch(new_descriptors, descriptors_, pairs, (float)(max_match_distance_ + 0.5f));
     cv::drawMatches(new_image, new_corners, result_image_, corners_, pairs, result);
 
