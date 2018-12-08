@@ -63,7 +63,7 @@ void descriptor_matcher::knnMatchImpl(cv::InputArray queryDescriptors, std::vect
             int32_t y[4] = {t_desc.at<int32_t>(j, 0), t_desc.at<int32_t>(j, 1), t_desc.at<int32_t>(j, 2), t_desc.at<int32_t>(j, 3)};
             int dist = distance(x, y);
 
-            if (dist > max_distance_)
+            if (dist > (int)(max_distance_))
                 continue;
 
             if (dist < first_match.dist)

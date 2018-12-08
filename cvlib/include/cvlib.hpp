@@ -57,6 +57,8 @@ class motion_segmentation : public cv::BackgroundSubtractor
 class corner_detector_fast : public cv::Feature2D
 {
     public:
+    const int dwords = 4;
+
     corner_detector_fast();
 
     /// \brief Fabrique method for creating FAST detector
@@ -155,78 +157,44 @@ class Stitcher
     public:
     Stitcher() : count_(0)
     {
+        setParams(16, 26, 0.7f);
     }
 
-    void add(cv::Mat new_part)
-    {
-        if (count_ == 0)
-        {
-            new_part.copyTo(acc_image_);
-            detector_.detectAndCompute(new_part, cv::Mat(), acc_corners_, acc_descriptors);
-        }
-        else
-        {
-            std::vector<cv::KeyPoint> new_corners;
-            cv::Mat new_descriptors;
-            detector_.detectAndCompute(new_part, cv::Mat(), new_corners, new_descriptors);
+    /// \brief Add new image
+    bool addImage(cv::Mat new_image);
 
-            std::vector<std::vector<cv::DMatch>> pairs;
-            matcher_.radiusMatch(new_descriptors, acc_descriptors, pairs, 999.0f);
+    /// \brief Get result image
+    cv::Mat getResult();
 
-            cv::Mat dbg_frame;
-            cv::drawMatches(new_part, new_corners, acc_image_, acc_corners_, pairs, dbg_frame);
-            cv::namedWindow("dbg");
-            cv::imshow("dbg", dbg_frame);
+    /// \brief Cancel last stitching
+    void cancelLast();
 
-            std::vector<cv::Point2f> src_points;
-            std::vector<cv::Point2f> dst_points;
+    /// \brief Set up parameters
+    void setParams(int detector_threshold, int max_match_distance, float matcher_ratio);
 
-            src_points.reserve(pairs.size());
-            dst_points.reserve(pairs.size());
-
-            for (size_t i = 0; i < pairs.size(); ++i)
-            {
-                for (size_t j = 0; j < pairs[i].size(); ++j)
-                {
-                    cv::DMatch& dmatch = pairs[i][j];
-                    cv::KeyPoint& new_corner = new_corners[dmatch.queryIdx];
-                    cv::KeyPoint& old_corner = acc_corners_[dmatch.trainIdx];
-                    src_points.push_back(new_corner.pt);
-                    dst_points.push_back(old_corner.pt); // << or vise versa?
-                }
-            }
-
-            if (src_points.size() < 4)
-            {
-                std::cout << "ERROR: Not enough matches\n";
-                return;
-            }
-
-            cv::Mat homo_mat = cv::findHomography(src_points, dst_points, CV_RANSAC, 3);
-
-            cv::Mat new_part_rectified;
-            cv::warpPerspective(new_part, new_part_rectified, homo_mat, acc_image_.size());
-
-            cv::namedWindow("test");
-            cv::imshow("test", new_part_rectified);
-        }
-        count_++;
-    }
-
-    cv::Mat getAccumulatedImage()
-    {
-        return acc_image_;
-    }
+    /// \brief Get debug image
+    cv::Mat getDebugImage(cv::Mat new_image);
 
     private:
-    cv::Mat acc_image_;
     int count_;
 
-    std::vector<cv::KeyPoint> acc_corners_;
-    cv::Mat acc_descriptors;
+    cv::Mat result_image_;
+    std::vector<cv::KeyPoint> corners_;
+    cv::Mat descriptors_;
+
+    cv::Mat old_result_image_;
+    std::vector<cv::KeyPoint> old_corners_;
+    cv::Mat old_descriptors_;
 
     cvlib::corner_detector_fast detector_;
     cvlib::descriptor_matcher matcher_;
+
+    int max_match_distance_ = 26;
+
+    bool addNewImage(cv::Mat new_image);
+    void savePreviousResult();
+    void updateCorners(cv::Point2f offset, cv::Matx33f transform_mat, const std::vector<cv::KeyPoint>& new_corners, cv::Mat new_descriptors,
+                       const std::vector<std::vector<cv::DMatch>>& pairs);
 };
 } // namespace cvlib
 

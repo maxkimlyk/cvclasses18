@@ -68,28 +68,25 @@ bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point, float& d
     static const cv::Point2i test_points_relative[16] = {{0, -3}, {1, -3}, {2, -2}, {3, -1}, {3, 0},  {3, 1},   {2, 2},   {1, 3},
                                                          {0, 3},  {-1, 3}, {-2, 2}, {-3, 1}, {-3, 0}, {-3, -1}, {-2, -2}, {-1, -3}};
 
-    bool begin_flag = true;
-    int begin_sign = 0;
+    int begin_sign = 0, current_sign = 0;
     size_t begin_count = 0, count = 0, first_index = 0;
-    int current_sign = 0;
 
-    for (size_t i = 0; i < 16; ++i)
+    int diff = (int)(image.at<uint8_t>(point + test_points_relative[0])) - (int)(image.at<uint8_t>(point));
+    int sign = soft_sign(diff, brightness_threshold);
+    bool begin_flag = sign != 0;
+
+    for (size_t i = 1; i < 16; ++i)
     {
-        int diff = (int)(image.at<uint8_t>(point + test_points_relative[i])) - (int)(image.at<uint8_t>(point));
-        int sign = soft_sign(diff, brightness_threshold);
+        diff = (int)(image.at<uint8_t>(point + test_points_relative[i])) - (int)(image.at<uint8_t>(point));
+        sign = soft_sign(diff, brightness_threshold);
 
-        if (sign != 0 && current_sign == sign)
+        if (sign == current_sign)
         {
             count++;
         }
-        else if (sign != 0 && current_sign == 0)
-        {
-            first_index = i;
-            count = 1;
-        }
         else
         {
-            if (count >= succeded_points_threshold)
+            if (current_sign != 0 && count >= succeded_points_threshold)
             {
                 direction = getDirectionRadians(0.5f * (i - 1 + first_index));
                 return true;
@@ -102,26 +99,26 @@ bool corner_detector_fast::testPixel(cv::Mat& image, cv::Point2i point, float& d
                 begin_flag = false;
             }
 
-            if (sign != 0)
-            {
-                first_index = i;
-                count = 1;
-            }
-            else
-            {
-                count = 0;
-                first_index = 0;
-            }
-        }
+            first_index = i;
+            count = 1;
 
-        current_sign = sign;
+            current_sign = sign;
+        }
     }
 
-    if (current_sign == begin_sign && count + begin_count >= succeded_points_threshold)
+    if (current_sign != 0)
     {
-        float index = 0.5f * (first_index + (begin_count - 1 + 16));
-        direction = getDirectionRadians(index >= 16.0f ? index - 16.0f : index);
-        return true;
+        if (current_sign == begin_sign && count + begin_count >= succeded_points_threshold)
+        {
+            float index = 0.5f * (first_index + (begin_count - 1 + 16));
+            direction = getDirectionRadians(index >= 16.0f ? index - 16.0f : index);
+            return true;
+        }
+        else if (count >= succeded_points_threshold)
+        {
+            direction = getDirectionRadians(0.5f * (15 + first_index));
+            return true;
+        }
     }
 
     return false;
